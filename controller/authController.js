@@ -16,11 +16,31 @@ exports.criarUsuario = async (req, res) => {
 }
 
 exports.login = async (req, res) => {
+
     const { email, senha } = req.body;
-    const usuario = await prisma.usuario.findFirst({where: {email, senha}});
+
+    
+    const usuario = await prisma.usuario.findUnique({
+        where: {email}
+    });
 
     if (!usuario) {
-        return res.status(401).json({ mensagem: 'login inválido!' });
+        return res.status(401).json({ mensagem: 'email ou senha inválidos!' })
     }
-    res.json({usurarioId: usuario.id})
+
+    //Comparação das senhas
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+
+    if (!senhaValida){
+        return res.status(401).json({ mensagem: 'senha inválidos!' })
+    }
+
+    //Gerar token
+    const token = jwt.sign(
+        {id: usuario.id},
+        process.env.JWT_SECRET,
+        {expiresIn: '1d'}
+    )
+
+    res.json({token})
 }
